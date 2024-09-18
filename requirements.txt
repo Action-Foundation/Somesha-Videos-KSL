@@ -1,0 +1,8 @@
+numpy
+requests
+opencv-python-headless
+gradio
+PyVimeo
+fastapi
+pydantic
+uvicorn
