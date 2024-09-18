@@ -1,7 +1,8 @@
 numpy
 requests
-opencv-python-headless
+opencv-python
 gradio
+vimeo
 PyVimeo
 fastapi
 pydantic

@@ -1,5 +1,6 @@
 import importlib
 import subprocess
+import sys
 
 def get_package_version(package_name):
     try:
@@ -9,11 +10,23 @@ def get_package_version(package_name):
     except AttributeError:
         # Some packages might not have __version__ attribute
         try:
-            return subprocess.check_output([package_name, "--version"]).decode().strip()
+            return subprocess.check_output([sys.executable, "-m", "pip", "show", package_name]).decode().split("\n")[1].split(": ")[1]
         except:
             return "Version not found"
 
-packages = ["numpy", "requests", "cv2", "gradio", "vimeo"]
+packages = [
+    "numpy",
+    "requests",
+    "opencv-python-headless",
+    "gradio",
+    "vimeo",
+    "PyVimeo",
+    "fastapi",
+    "pydantic",
+    "uvicorn"
+]
+
+print(f"Python version: {sys.version.split()[0]}")
 
 for package in packages:
     version = get_package_version(package)
