@@ -1,6 +1,6 @@
 numpy
 requests==2.32.3
-opencv-python
+opencv-python-headless
 gradio
 PyVimeo
 fastapi
