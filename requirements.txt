@@ -1,5 +1,5 @@
 numpy
-requests
+requests>=2.20.0
 opencv-python
 gradio
 vimeo
