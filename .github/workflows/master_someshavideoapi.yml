@@ -29,6 +29,11 @@ jobs:
       
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Install system dependencies for libGL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-glx
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
