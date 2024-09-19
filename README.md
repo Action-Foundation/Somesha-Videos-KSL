@@ -1,4 +1,4 @@
-```markdown
+
 # Video Combiner Tool
 
 ## Overview
@@ -108,7 +108,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Gradio](https://gradio.app/)
 - [OpenCV](https://opencv.org/)
 - [Vimeo API](https://developer.vimeo.com/)
-```
+
 
 ### Notes:
 

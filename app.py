@@ -22,23 +22,12 @@ logger = logging.getLogger(__name__)
 class VideoURLs(BaseModel):
     urls: List[str]
 
-MAX_VIDEOS = 10
+MAX_VIDEOS = 1010
 
-'''
-# Vimeo client setup
-client = vimeo.VimeoClient(
-    token='6c0e53613726874a46da7c0f286e27b5',
-    key='45dc18a3c7bdb1dc6255a49d784398b14b4fd55f',
-    secret='jVwFHFHWs0pGs0rdlHzCnDvkJFru1IeNACt0ygV9bk3mMU45hzZGvg/I+vTzzzvpU1HakvxdxITzf/gokrq5k8VPwQmGirosmltJZAf9/CIAnPpKw19lGrr13MKXKQ1m'
-)
-'''
+# Vimeo API credentials
+VIMEO_ACCESS_TOKEN = "35b24d71f540bfa24e61d488cf34e457"  # Replace with your Vimeo token
+VIMEO_UPLOAD_URL = "https://api.vimeo.com/me/videos"
 
-# Vimeo client setup
-client = vimeo.VimeoClient(
-    token='35b24d71f540bfa24e61d488cf34e457',
-    key='9efa7b1c1827ce4b1d74330d0a90cf62ff4da8b9',
-    secret='QIwoszSklYElk2wH5PHqe/EzSDB8HM+gdHBg4iaiDs2SkYa+RS3T4ei/VrPWGMMZt2qGXYIbjxfNlPYOtz5g3Ylsys0VpBuiUjkRhz+oR6yR2epl/MW68V1ZxS/D7EwD'
-)
 
 def download_video(url):
     try:
@@ -61,6 +50,8 @@ def combine_videos(urls):
     temp_files = []
     for url in urls:
         if url.strip():
+            # Check if it's a newline character
+
             try:
                 temp_files.append(download_video(url.strip()))
             except Exception as e:
@@ -71,6 +62,8 @@ def combine_videos(urls):
         raise HTTPException(status_code=400, detail="No valid videos to combine")
 
     try:
+        # Trim video to 400 milliseconds for newline characters
+        
         captures = [cv2.VideoCapture(file) for file in temp_files]
 
         fps = captures[0].get(cv2.CAP_PROP_FPS)
@@ -102,26 +95,55 @@ def combine_videos(urls):
 
 def upload_to_vimeo(video_path):
     try:
-        # Upload the video to Vimeo
-        uri = client.upload(video_path, data={
-            'name': 'Combined Video',
-            'description': 'This video was combined using our app.'
-        })
-        
-        # Get the Vimeo URL
-        response = client.get(uri + '?fields=link').json()
-        vimeo_url = response['link']
-        
-        return vimeo_url
-    except vimeo.exceptions.VideoUploadFailure as e:
-        logger.error(f"Video upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to upload to Vimeo: {str(e)}")
-    except vimeo.exceptions.APIRateLimitExceededFailure:
-        logger.error("API rate limit exceeded")
-        raise HTTPException(status_code=429, detail="API rate limit exceeded. Please try again later.")
-    except Exception as e:
-        logger.error(f"Unexpected error during Vimeo upload: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to upload to Vimeo: {str(e)}")
+        # Step 1: Request an upload link (initialize the upload)
+        headers = {
+            'Authorization': f'Bearer {VIMEO_ACCESS_TOKEN}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.vimeo.*+json;version=3.4'
+        }
+
+        # Video metadata and upload initialization
+        upload_data = {
+            'upload': {
+                'approach': 'tus',  # Use the 'tus' approach for large file uploads
+                'size': os.path.getsize(video_path)
+            },
+            'name': 'Uploaded Video',
+            'description': 'This video was uploaded using the Vimeo Upload API.'
+        }
+
+        # Send request to create an upload ticket
+        response = requests.post(VIMEO_UPLOAD_URL, json=upload_data, headers=headers)
+        response.raise_for_status()
+        vimeo_data = response.json()
+
+        # Extract the upload link
+        upload_link = vimeo_data['upload']['upload_link']
+        video_uri = vimeo_data['uri']  # Used to get the video link after upload
+
+        # Step 2: Upload the video file using the provided upload link
+        tus_headers = {
+            'Tus-Resumable': '1.0.0',
+            'Upload-Offset': '0',
+            'Content-Type': 'application/offset+octet-stream',
+            'Authorization': f'Bearer {VIMEO_ACCESS_TOKEN}'
+        }
+
+        with open(video_path, 'rb') as video_file:
+            tus_response = requests.patch(upload_link, headers=tus_headers, data=video_file)
+            tus_response.raise_for_status()
+
+        # Step 3: Confirm the upload and retrieve the Vimeo video link
+        video_response = requests.get(f"https://api.vimeo.com{video_uri}?fields=link", headers=headers)
+        video_response.raise_for_status()
+        video_link = video_response.json()['link']
+
+        print(f"Video uploaded successfully: {video_link}")
+        return video_link
+
+    except requests.RequestException as e:
+        print(f"Error uploading video to Vimeo: {str(e)}")
+        raise
 
 @app.post("/combine_videos")
 async def process_urls(video_urls: VideoURLs):
