@@ -2,7 +2,7 @@ numpy
 requests>=2.20.0
 opencv-python
 gradio
-vimeo
+vimeo>=1.0.0
 PyVimeo
 fastapi
 pydantic
